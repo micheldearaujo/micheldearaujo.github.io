@@ -460,10 +460,119 @@ write.csv(anuncios, 'imoveis.csv', row.names = FALSE)
 										in which each line was a complete listing of a property taken from the Zap Imoveis website. At the end we have a dataframe with 8 columns,
 										each of which represents different information about the establishment.
 										The following table provides a brief description of what each column represents.
+
+										<h4>Dataset variables summary</h4>
+										<div class="table-wrapper">
+											<table class="alt">
+												<thead>
+													<tr>
+														<th>Variable</th>
+														<th>Type</th>
+														<th>Description</th>
+													</tr>
+												</thead>
+												<tbody>
+													<tr>
+														<td>Type</td>
+														<td>Character</td>
+														<td>Property type (house or apartament).</td>
+													</tr>
+													<tr>
+														<td>Preco</td>
+														<td>Numeric</td>
+														<td>Monthly cost of the property.</td>
+													</tr>
+													<tr>
+														<td>Area</td>
+														<td>Numeric</td>
+														<td>Value, in squared meters, of the property.</td>
+													</tr>
+													<tr>
+														<td>Bedrooms</td>
+														<td>Numeric</td>
+														<td>Quantity of bedrooms in the property.</td>
+													</tr>
+													<tr>
+														<td>Bathrooms</td>
+														<td>Numeric</td>
+														<td>Quantity of bathrooms in the property.</td>
+													</tr>
+													<tr>
+														<td>Address</td>
+														<td>Character</td>
+														<td>Full address of the property.</td>
+													</tr>
+													<tr>
+														<td>State</td>
+														<td>Character.</td>
+														<td>Brazilian state in which the property is.</td>
+													</tr>
+													<tr>
+														<td>City</td>
+														<td>Character.</td>
+														<td>Brazilian city in which the property is.</td>
+													</tr>
+													<tr>
+														<td>lat</td>
+														<td>Numeric.</td>
+														<td>The property Latitude (geographical coordinate).</td>
+													</tr>
+													<tr>
+														<td>long</td>
+														<td>Numeric.</td>
+														<td>The property Longitude (geographical coordinate).</td>
+													</tr>
+												</tbody>
+											</table>
+										</div>
 									</p>
 
 
 									<h2 class="major">Chapter 2: Exploratory Data Analysis</h2>
+									<p>
+										Welcome to the second part of this project. EDA, “Exploratory Data Analysis”, refers to the initial investigation stage conducted on the data cleaned
+										in the preparation stage. The objective here is, as the name implies, to explore. Knowing the data to know not only what happened in the past but also
+										knowing how to explain what and how a given phenomenon happened and what to do if it happens again - so-called descriptive and diagnostic analysis,
+										are two main characteristics of an exploratory analysis (EA ). At this point, let's not worry about trying to use the data to predict the future.
+										We just want insights into what happened and what is happening. Contextualized with the business world, AE is directly related to BI
+										(Business Intelligence). BI is precisely concerned with relying on scientific information (the data) in order to make business decisions.
+										Companies that follow this “philosophy” are known as Data Driven companies. As such, I will now conduct an AE on the cleaned and transformed
+										data in the previous section.
+									</p>
+
+									<h3 class="major">Inital Exploration</h3>
+									<p>
+										I start by importing the imoveis.csv file that I saved at the end of the last section.
+										<pre><code>
+anuncios <- read_csv('imoveis.csv', locale=locale(encoding='latin1'))
+head(anuncios, 5)
+
+## # A tibble: 5 x 10
+##   Tipo  Preco  Area Quartos Banheiros Endereco         Estado Cidade   lat  long
+##   <chr> <dbl> <dbl>   <dbl>     <dbl> <chr>            <chr>  <chr>  <dbl> <dbl>
+## 1 AP     1300    61       1         1 "Rua da Repúbli~ RS     Porto~ -30.0 -51.2
+## 2 AP     1500    42       2         1 "Rua Cônego Lad~ SP     São P~ -23.5 -46.6
+## 3 AP      700    35       1         2 "Centro Históri~ RS     Porto~ -30.0 -51.2
+## 4 AP     1450    56       2         2 "Rua Marquês de~ SP     São P~ -23.6 -46.6
+## 5 AP      950    45       2         1 "Gleba Palhano,~ PR     Londr~  NA    NA
+										</code></pre>
+
+										How will property prices be distributed? How much do you think the maximum rental price is? Let's figure this out using a simple histogram.
+
+										<pre><code>
+options(scipen=999)
+hist <- plot_ly(data=anuncios,
+                type='histogram') %>%
+  add_trace(x=~Preco,
+            name='Preço') %>%
+            layout(title='Distribuição dos preços',
+                   xaxis=list(title='Preço'),
+                   yaxis=list(title='Frequência'))
+hist
+										</code></pre>
+									</p>
+
+
 
 									<h2 class="major">Chapter 3: Geoespacial Analysis</h2>
 
