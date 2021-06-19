@@ -253,7 +253,213 @@ head(anuncios, 2)
 ## 1   AP  1300 61 m²\r
 ## 2   AP  1500 42 m²\r
 										</code></pre>
+									this time was not necessary dropping any rows. Lets clean it and extract only the numerical value
+										<pre><code>
+anuncios$Area <- parse_number(x=anuncios$Area, locale=locale(decimal_mark=',', grouping_mark='.'))
+head(anuncios,2)
 
+##                                                                                                                                                                                                            Anuncio
+## 1 super destaque apartamento para alugar em\r\nRua da República - Cidade Baixa, Porto Alegre - RS\r\nR$ 1.300 /mês\r\ncondomínio R$ 516 IPTU R$ 53 aluguel e condomínioR$ 1.816\r\n61 m²\r\n1 quarto\r\n1 banheiro
+## 2             apartamento para alugar em\r\nRua Cônego Ladeira, 57 - Vila Mazzei, São Paulo - SP\r\nR$ 1.500 /mês\r\ncondomínio R$ 100 IPTU R$ 32 aluguel e condomínioR$ 1.600\r\n42 m²\r\n2 quartos\r\n1 banheiro
+##   Tipo Preco Area
+## 1   AP  1300   61
+## 2   AP  1500   42
+										</code></pre>
+									The dataframe is starting to take shape. But I still don't have all the information I need to carry out a study, so let's go ahead.
+									</p>
+
+									<h4 class="major">Bedroom numbers</h4>
+									<p>
+										The next piece of information Were are going to extract is the number of rooms. It probably is not going to present any difficulties.
+										<pre><code>
+anuncios$Quartos <- grep(pattern='quartos?', x=dados, value=TRUE)
+
+## Error in `$<-.data.frame`(`*tmp*`, Quartos, value = c("1 quarto\r", "2 quartos\r", : replacement has 39176 rows, data has 39189
+										</code></pre>
+										Apparently it was wrong. I'll remove the ads that didn't inform the number of rooms, extract the information and clear the column, leaving only the values.
+										<pre><code>
+anuncios <- data.frame(anuncios[grepl(pattern='quartos?', x=anuncios$Anuncio), ]) # Filtering the dataframe.
+anuncios$Quartos <- grep(pattern='quartos?', x=dados, value=TRUE) # Extracting the number of rooms.
+anuncios$Quartos <- parse_number(x=anuncios$Quartos, locale=locale(decimal_mark=',', grouping_mark='.')) # Extracting only the numerical value.
+head(anuncios)
+
+##                                                                                                                                                                                                             Anuncio
+## 1  super destaque apartamento para alugar em\r\nRua da República - Cidade Baixa, Porto Alegre - RS\r\nR$ 1.300 /mês\r\ncondomínio R$ 516 IPTU R$ 53 aluguel e condomínioR$ 1.816\r\n61 m²\r\n1 quarto\r\n1 banheiro
+## 2              apartamento para alugar em\r\nRua Cônego Ladeira, 57 - Vila Mazzei, São Paulo - SP\r\nR$ 1.500 /mês\r\ncondomínio R$ 100 IPTU R$ 32 aluguel e condomínioR$ 1.600\r\n42 m²\r\n2 quartos\r\n1 banheiro
+## 3                                   apartamento para alugar em\r\nCentro Histórico, Porto Alegre - RS\r\nR$ 700 /mês\r\ncondomínio R$ 220 IPTU R$ 35 aluguel e condomínioR$ 920\r\n35 m²\r\n1 quarto\r\n2 banheiros
+## 4 apartamento para alugar em\r\nRua Marquês de Valença - Móoca, São Paulo - SP\r\nR$ 1.450 /mês\r\ncondomínio R$ 850 IPTU não informado aluguel e condomínioR$ 2.300\r\n56 m²\r\n2 quartos\r\n1 vaga\r\n2 banheiros
+## 5                      apartamento para alugar em\r\nGleba Palhano, Londrina - PR\r\nR$ 950 /mês\r\ncondomínio R$ 280 IPTU não informado aluguel e condomínioR$ 1.230\r\n45 m²\r\n2 quartos\r\n1 vaga\r\n1 banheiro
+## 6               apartamento para alugar em\r\nJardim São Dimas, São José dos Campos - SP\r\nR$ 1.150 /mês\r\ncondomínio R$ 450 IPTU R$ 45 aluguel e condomínioR$ 1.600\r\n45 m²\r\n1 quarto\r\n1 vaga\r\n1 banheiro
+##   Tipo Preco Area Quartos
+## 1   AP  1300   61       1
+## 2   AP  1500   42       2
+## 3   AP   700   35       1
+## 4   AP  1450   56       2
+## 5   AP   950   45       2
+## 6   AP  1150   45       1
+										</code></pre>
+										Remembering that as I deleted lines from the dataframe, it is necessary to update the data vector.
+										<pre><code>
+dados <- unlist(strsplit(x=anuncios$Anuncio, split='\n'))
+										</code></pre>
+									</p>
+
+									<h4 class="major">Bathrooms number</h4>
+									<p>
+										Well, until here there is nothing new.
+										<pre><code>
+anuncios <- data.frame(anuncios[grepl(pattern='banheiros?', x=anuncios$Anuncio), ])
+anuncios$Banheiros <- grep(pattern='banheiros?', x=dados, value=T)
+anuncios$Banheiros <- parse_number(x=anuncios$Banheiros, locale=locale(decimal_mark=',', grouping_mark='.'))
+dados <- unlist(strsplit(x=anuncios$Anuncio, split='\n'))
+										</code></pre>
+									</p>
+
+									<h4 class="major">The "Endereco" variable</h4>
+									<p>
+										Finally, it was time to extract the property address. Note that addresses always have a hyphen in their text and no
+										other information has a hyphen, so I'll use this to my advantage.
+										As the address is a very important feature of the property, it is unlikely that this information is missing from any of them.
+										<pre><code>
+anuncios$Endereco <- grep(pattern='-', x=dados, value=TRUE)
+head(anuncios, 2)
+
+##                                                                                                                                                                                                            Anuncio
+## 1 super destaque apartamento para alugar em\r\nRua da República - Cidade Baixa, Porto Alegre - RS\r\nR$ 1.300 /mês\r\ncondomínio R$ 516 IPTU R$ 53 aluguel e condomínioR$ 1.816\r\n61 m²\r\n1 quarto\r\n1 banheiro
+## 2             apartamento para alugar em\r\nRua Cônego Ladeira, 57 - Vila Mazzei, São Paulo - SP\r\nR$ 1.500 /mês\r\ncondomínio R$ 100 IPTU R$ 32 aluguel e condomínioR$ 1.600\r\n42 m²\r\n2 quartos\r\n1 banheiro
+##   Tipo Preco Area Quartos Banheiros
+## 1   AP  1300   61       1         1
+## 2   AP  1500   42       2         1
+##                                                 Endereco
+## 1   Rua da República - Cidade Baixa, Porto Alegre - RS\r
+## 2 Rua Cônego Ladeira, 57 - Vila Mazzei, São Paulo - SP\r
+										</code></pre>
+										Now we have the complete adress of each property. But we need less specific information, like city and state. So, lets get it.
+									</p>
+
+
+									<h4 class="major">The "Estado" Variable</h4>
+									<p>
+										Note that the end of each string in the address column ends with the state, written by an acronym. Therefore, I will use pattern='[A-Z]{2}$.
+										<pre><code>
+anuncios$Estado <- unlist(str_extract_all(pattern='[A-Z]{2}$', string=anuncios$Endereco))
+head(anuncios,3)
+
+##                                                                                                                                                                                                            Anuncio
+## 1 super destaque apartamento para alugar em\r\nRua da República - Cidade Baixa, Porto Alegre - RS\r\nR$ 1.300 /mês\r\ncondomínio R$ 516 IPTU R$ 53 aluguel e condomínioR$ 1.816\r\n61 m²\r\n1 quarto\r\n1 banheiro
+## 2             apartamento para alugar em\r\nRua Cônego Ladeira, 57 - Vila Mazzei, São Paulo - SP\r\nR$ 1.500 /mês\r\ncondomínio R$ 100 IPTU R$ 32 aluguel e condomínioR$ 1.600\r\n42 m²\r\n2 quartos\r\n1 banheiro
+## 3                                  apartamento para alugar em\r\nCentro Histórico, Porto Alegre - RS\r\nR$ 700 /mês\r\ncondomínio R$ 220 IPTU R$ 35 aluguel e condomínioR$ 920\r\n35 m²\r\n1 quarto\r\n2 banheiros
+##   Tipo Preco Area Quartos Banheiros
+## 1   AP  1300   61       1         1
+## 2   AP  1500   42       2         1
+## 3   AP   700   35       1         2
+##                                                 Endereco Estado
+## 1   Rua da República - Cidade Baixa, Porto Alegre - RS\r     RS
+## 2 Rua Cônego Ladeira, 57 - Vila Mazzei, São Paulo - SP\r     SP
+## 3                  Centro Histórico, Porto Alegre - RS\r     RS
+										</code></pre>
+										Perfect! That was easy.
+									</p>
+
+									<h4 class="major">The "Cidade" variable</h4>
+									<p>
+										This part is a bit more complicated. At first, I could define the pattern as ',\\s.*\\s-':
+										<pre><code>
+anuncios$Cidade <- unlist(str_extract_all(pattern=',\\s.*\\s-', string=anuncios$Endereco))
+
+## Error in `$<-.data.frame`(`*tmp*`, Cidade, value = c(", Porto Alegre -", : replacement has 39115 rows, data has 39164
+										</code></pre>
+										Some lines does not carries the city name, so i will remove those.
+										<pre><code>
+anuncios <- data.frame(anuncios[grepl(pattern=',\\s.*\\s-', x=anuncios$Endereco), ])
+dados <- unlist(strsplit(x=anuncios$Anuncio, split='\n'))
+anuncios$Cidade <- unlist(str_extract_all(pattern=',\\s.*\\s-', string=anuncios$Endereco))
+head(anuncios[3:7,7])
+
+## [1] "Centro Histórico, Porto Alegre - RS\r"
+## [2] "Rua Marquês de Valença - Móoca, São Paulo - SP\r"
+## [3] "Gleba Palhano, Londrina - PR\r"
+## [4] "Jardim São Dimas, São José dos Campos - SP\r"
+## [5] "Rua Doutor Quirino, 533 - Centro, Campinas - SP\r"
+										</code></pre>
+									</p>
+
+									<h4 class="major">Geolocalization</h4>
+									<p>
+										What I'm going to do now is use the geocode function from the tidygeocoder library to extract latitude and longitude information from property addresses.
+										The purpose of this is to look at the dataset from a geographic point of view and learn how properties behave according to the regions of Brazil. This function receives as input a dataframe and a specific column of this dataframe, which is where the addresses are.
+										Before that, I'll add Brazil to the end of all addresses, so that no location from another country that also speaks Portuguese is returned.
+										<pre><code>
+anuncios$Endereco <- paste(anuncios$Endereco, 'Brazil', sep=', ')
+anuncios <- geocode(.tbl=anuncios, address='Endereco')
+										</code></pre>
+										Ufa! Chegamos ao final da extração das informações. Para finalizar esta etapa de limpeza, vamos excluir as linhas repetidas e selecionar o dataframe sem a coluna “Anuncio”.
+										<pre><code>
+anuncios <- anuncios[!duplicated(anuncios),] # Remove as duplicatas
+anuncios <- select(anuncios, -Anuncio) # Exclui a coluna "Anuncio"
+head(anuncios, 10)
+
+##    Tipo Preco Area Quartos Banheiros
+## 1    AP  1300   61       1         1
+## 2    AP  1500   42       2         1
+## 3    AP   700   35       1         2
+## 4    AP  1450   56       2         2
+## 5    AP   950   45       2         1
+## 6    AP  1150   45       1         1
+## 7    AP   600   73       1         2
+## 8    AP  1500   49       2         1
+## 10   AP  1400   70       2         1
+## 11   AP  1300  103       2         2
+##                                                          Endereco Estado
+## 1    Rua da República - Cidade Baixa, Porto Alegre - RS\r, Brazil     RS
+## 2  Rua Cônego Ladeira, 57 - Vila Mazzei, São Paulo - SP\r, Brazil     SP
+## 3                   Centro Histórico, Porto Alegre - RS\r, Brazil     RS
+## 4        Rua Marquês de Valença - Móoca, São Paulo - SP\r, Brazil     SP
+## 5                          Gleba Palhano, Londrina - PR\r, Brazil     PR
+## 6            Jardim São Dimas, São José dos Campos - SP\r, Brazil     SP
+## 7       Rua Doutor Quirino, 533 - Centro, Campinas - SP\r, Brazil     SP
+## 8               Jardim Flor da Montanha, Guarulhos - SP\r, Brazil     SP
+## 10      Rua César Lombroso - Bom Fim, Porto Alegre - RS\r, Brazil     RS
+## 11               Jardim Anhanguéra, Ribeirão Preto - SP\r, Brazil     SP
+##                 Cidade
+## 1         Porto Alegre
+## 2            São Paulo
+## 3         Porto Alegre
+## 4            São Paulo
+## 5             Londrina
+## 6  São José dos Campos
+## 7             Campinas
+## 8            Guarulhos
+## 10        Porto Alegre
+## 11      Ribeirão Preto
+										</code></pre>
+										And the structure:
+										<pre><code>
+## 'data.frame':    25475 obs. of  8 variables:
+##  $ Tipo     : chr  "AP" "AP" "AP" "AP" ...
+##  $ Preco    : num  1300 1500 700 1450 950 1150 600 1500 1400 1300 ...
+##  $ Area     : num  61 42 35 56 45 45 73 49 70 103 ...
+##  $ Quartos  : num  1 2 1 2 2 1 1 2 2 2 ...
+##  $ Banheiros: num  1 1 2 2 1 1 2 1 1 2 ...
+##  $ Endereco : chr  "Rua da República - Cidade Baixa, Porto Alegre - RS\r, Brazil" "Rua Cônego Ladeira, 57 - Vila Mazzei, São Paulo - SP\r, Brazil" "Centro Histórico, Porto Alegre - RS\r, Brazil" "Rua Marquês de Valença - Móoca, São Paulo - SP\r, Brazil" ...
+##  $ Estado   : chr  "RS" "SP" "RS" "SP" ...
+##  $ Cidade   : chr  "Porto Alegre" "São Paulo" "Porto Alegre" "São Paulo" ...
+										</code></pre>
+										As can be seen, the number of lines has been greatly reduced due to the amount of repeated ads.
+									This duplication may have occurred both at the time of data collection, in which the program went through the same link more than once,
+									or by part of the website, which may have repeated ads. I will export the .csv file to save the progress.
+										<pre><code>
+write.csv(anuncios, 'imoveis.csv', row.names = FALSE)
+										</code></pre>
+									</p>
+
+
+									<h4 class="major">Summary</h4>
+									<p>
+										We have reached the end of the dataset cleanup and transformation step. In the beginning it was just a string column,
+										in which each line was a complete listing of a property taken from the Zap Imoveis website. At the end we have a dataframe with 8 columns,
+										each of which represents different information about the establishment.
+										The following table provides a brief description of what each column represents.
 									</p>
 
 
