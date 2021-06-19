@@ -53,7 +53,7 @@
 							<div class="wrapper">
 								<div class="inner">
 
-									<h3 class="major">Introduction</h3>
+									<h2 class="major">Introduction</h2>
 									<p>During my childhood, for various reasons, my family always had to move constantly. Today, at 23, I have moved 12 times and counting.
 										It was practically once every two years. This lifestyle can have its upsides, such as always meeting new places, new people,
 										new experiences and getting out of the box when discovering that the world is much more than it appears. However, always moving
@@ -77,7 +77,191 @@
 										wish to rent it but do not know how much it is worth, and for realtors, who technically do the same, but with third-party properties. This way, the client will be able to know more assertively what the value of his property should be
 										based on hundreds of other properties with similar characteristics, from the same neighborhood and from nearby neighborhoods.</p>
 
-									<h3 class="major">Vitae phasellus</h3>
+									<h2 class="major">Necessary packages</h2>
+									The following R packages will be necessary to develop this project:
+									<pre><code>
+library(dplyr) # String manipulation functions
+library(readr) # Reading files and parse_number functions
+library(stringr) # String manipulation
+library(tidyr) # Data manipulation
+library(DT) # Interactive tables
+library(tidygeocoder) # Extract geographical informations from addresses
+library(ggplot2) # Static graphics
+library(plotly) # Interactive graphics
+library(ggpubr) # Make subplots with ggplot2
+require(nortest) # Anderson-DarlingHypothesis test
+library(RColorBrewer) # More palette colors
+library(rnaturalearth) # Getting sf maps
+library(classInt) # Categorization of continuous variables</code></pre>
+									<h2 class="major">Chapter 1: Data cleaning and transformation</h2>
+									<p>All data were extracted via Webscraping from only one website, Zap Imóveis. This website allows one to filter between buying, renting, property type and location. The site presents different types of properties, such as apartment, studio, kitnet house, condominium house, village house, penthouse, flat, loft, land, and several other types of commercial establishments. In this project we will focus only on residential properties of the house and apartment type. The original purpose of the data is the commercialization of real estate, as it is a website where anyone can advertise their property for sale or rent. As the Webscraping process depends a lot on the internet speed, I collected all ads during the period from April to June. It may have taken longer than necessary, but I was still learning about the automation process and I certainly made some redundancies in the algorithm (for example, I had to go manually choosing geographic regions because it is only possible to filter up to 5 regions and the site do not makes all pages available without filtering.) The Webscraping process returns a string containing all the information of the ad in question, as can be seen in Figure 1. Thus,
+									the original form of the dataframe has only one variable.However, more variables will be created during the transformation process.</p>
+
+									<h3>Import and getting to know the data</h3>
+									<p>Let's get to work! The first step is to import the data and visualize its structure.
+									<pre><code>
+anuncios <- read.csv('housing_prices.csv')
+print('Dataframe structure: ')
+str(anuncios)
+
+# Result
+## 'data.frame':    39912 obs. of  1 variable:
+##  $ Anuncio: chr  "super destaque apartamento para alugar em\r\nRua da República - Cidade Baixa, Porto Alegre - RS\r\nR$ 1.300 /mê"| __truncated__ "apartamento para alugar em\r\nRua Cônego Ladeira, 57 - Vila Mazzei, São Paulo - SP\r\nR$ 1.500 /mês\r\ncondomín"| __truncated__ "apartamento para alugar em\r\nCentro Histórico, Porto Alegre - RS\r\nR$ 700 /mês\r\ncondomínio R$ 220 IPTU R$ 3"| __truncated__ "apartamento para alugar em\r\nRua Marquês de Valença - Móoca, São Paulo - SP\r\nR$ 1.450 /mês\r\ncondomínio R$ "| __truncated__ ...
+##  - attr(*, "spec")=
+##   .. cols(
+##   ..   Anuncio = col_character()
+##   .. )
+									</code></pre>
+									Let us print a few lines to see how the ads are written:
+									<pre><code>
+head(anuncios,5)
+
+## Anuncio
+## 1  super destaque apartamento para alugar em\r\nRua da República - Cidade Baixa, Porto Alegre - RS\r\nR$ 1.300 /mês\r\ncondomínio R$ 516 IPTU R$ 53 aluguel e condomínioR$ 1.816\r\n61 m²\r\n1 quarto\r\n1 banheiro
+## 2  apartamento para alugar em\r\nRua Cônego Ladeira, 57 - Vila Mazzei, São Paulo - SP\r\nR$ 1.500 /mês\r\ncondomínio R$ 100 IPTU R$ 32 aluguel e condomínioR$ 1.600\r\n42 m²\r\n2 quartos\r\n1 banheiro
+## 3  apartamento para alugar em\r\nCentro Histórico, Porto Alegre - RS\r\nR$ 700 /mês\r\ncondomínio R$ 220 IPTU R$ 35 aluguel e condomínioR$ 920\r\n35 m²\r\n1 quarto\r\n2 banheiros
+## 4  apartamento para alugar em\r\nRua Marquês de Valença - Móoca, São Paulo - SP\r\nR$ 1.450 /mês\r\ncondomínio R$ 850 IPTU não informado aluguel e condomínioR$ 2.300\r\n56 m²\r\n2 quartos\r\n1 vaga\r\n2 banheiros
+## 5  apartamento para alugar em\r\nGleba Palhano, Londrina - PR\r\nR$ 950 /mês\r\ncondomínio R$ 280 IPTU não informado aluguel e condomínioR$ 1.230\r\n45 m²\r\n2 quartos\r\n1 vaga\r\n1 banheiro
+									</code></pre>
+									Therefore, what we have here is the raw text of 39912 houses and apartaments announcements in Brazil.
+									The objective is to separate this lines breaks ("\r\n") into each characteristic of the property so we can study
+									the problem and make conclusions about it.
+									</p>
+									<h3>Cleaning and transformation</h3>
+									<p>
+										First, it is important to understand why the cleaning and transformation steps are together.
+										That is because the two processes will happen simultaneously, sometimes transforming,
+										sometimes performing deleting some rows. The first step in cleaning and transforming is to
+										create a column that tells you whether the property is a house (CS) or apartment (AP) type.
+										For this I will use the <code>str_extract_all</code> function, from the <em>stringr</em> package.
+									</p>
+
+									<h4>The "Type" variable</h4>
+									<p>
+										<pre><code>
+anuncios$Tipo <- unlist(str_extract_all(pattern = 'apartamento|casa|sobrado', string = anuncios$Anuncio))
+
+## Error in `$<-.data.frame`(`*tmp*`, Tipo, value = c("apartamento", "apartamento", : replacement has 39764 rows, data has 39912
+										</code></pre>
+									An error was returned. It says that the quantity of items to add to the dataframe is less than the quantity of rows in the dataframe.
+									This happened because not all ads specified whether it was a house or apartment or townhouse (which is a type of house). As the amount
+									of ads without this information is relatively low (148 out of 39912 ads),
+									I will remove the lines that do not have this information and then extract the “Type” information.
+										<pre><code>
+anuncios <- data.frame(Anuncio = anuncios[grepl(pattern = 'casa|apartamento|sobrado', x = anuncios$Anuncio), ])
+anuncios$Tipo <- unlist(str_extract_all(pattern = 'apartamento|casa|sobrado', string = anuncios$Anuncio))
+										</code></pre>
+									The <code>grepl</code> function returns <code>TRUE</code> for a row when it matches the pattern and
+									<code>FALSE</code> otherwise. Now, for simplicity, lets use initials instead of the full name,
+									Where 'AP' stands for apartament and 'CS' stands for house.
+										<pre><code>
+anuncios$Tipo <- gsub(pattern='apartamento', replacement='AP', x=anuncios$Tipo)
+anuncios$Tipo <- gsub(pattern='casa|sobrado', replacement='CS', x=anuncios$Tipo)
+										</code></pre>
+									Look at that, we have got our first information!
+									</p>
+
+									<h4 class="major">the "Price" variable</h4>
+									<p>
+									Next, let's extract the rental value from the property.
+									To make the process easier, let's create a vector that contains all ads but separated in their line breaks, as follows
+										<pre><code>
+dados <- unlist(strsplit(x = anuncios$Anuncio, split='\n'))
+head(dados, 10)
+
+##  [1] "super destaque apartamento para alugar em\r"
+##  [2] "Rua da República - Cidade Baixa, Porto Alegre - RS\r"
+##  [3] "R$ 1.300 /mês\r"
+##  [4] "condomínio R$ 516 IPTU R$ 53 aluguel e condomínioR$ 1.816\r"
+##  [5] "61 m²\r"
+##  [6] "1 quarto\r"
+##  [7] "1 banheiro"
+##  [8] "apartamento para alugar em\r"
+##  [9] "Rua Cônego Ladeira, 57 - Vila Mazzei, São Paulo - SP\r"
+## [10] "R$ 1.500 /mês\r"
+										</code></pre>
+									Why create such a vector? The grep function returns only those elements of an array that have the established pattern.
+									If I used grep in the ad column itself, it would return the entire row since it's a single string. By separating each ad into multiple vectors,
+									through the line break, I get multiple lines, and only one line per ad contains the rental price. This way, when using grep, only the lines with the
+									price will be returned.
+									As each ad has only one piece of information of each type, this process will not change our data. So, we can extract the rent amount:
+										<pre><code>
+anuncios$Preco <- grep(pattern = '/mês', x = dados, value = TRUE)
+
+## Error in `$<-.data.frame`(`*tmp*`, Preco, value = c("R$ 1.300 /mês\r", : replacement has 39123 rows, data has 39764
+										</code></pre>
+									Another error stating that the new column has fewer rows than the dataframe. Let's see what's going on.
+										<pre><code>
+head(data.frame(anuncios[!grepl(pattern = '/mês', x = anuncios$Anuncio), ]), 3)
+
+##                                                                                                                                                                                                                   Anuncio
+## 9   destaque apartamento para alugar em\r\nRua Augusto Severo Neto, 84 - Pirangi do Norte, Parnamirim - RN\r\nR$ 800 /dia\r\ncondomínio não informado IPTU não informado\r\n120 m²\r\n2 quartos\r\n2 vagas\r\n2 banheiros
+## 65                                               apartamento para alugar em\r\nPrainha, Arraial do Cabo - RJ\r\nR$ 420 /dia\r\ncondomínio não informado IPTU não informado\r\n80 m²\r\n2 quartos\r\n1 vaga\r\n2 banheiros
+## 143                             apartamento para alugar em\r\nQuadra Mar Centro, Balneário Camboriú - SC\r\nR$ 1.000 /dia\r\ncondomínio não informado IPTU não informado\r\n104 m²\r\n3 quartos\r\n2 vagas\r\n2 banheiros
+##     Tipo
+## 9     AP
+## 65    AP
+## 143   AP
+										</code></pre>
+									As can be seen, some advertisements inform the rental value using the word “Rent” and other advertisements are advertised dayily “/day”. As we are only interested in monthly rents, we will exclude daily rents.
+										<pre><code>
+anuncios <- data.frame(anuncios[grepl(pattern = 'Aluguel|/mês', x = anuncios$Anuncio), ])
+										</code></pre>
+									Note that after deleting some lines of the dataframe, it is necessary to redefine the "data" vector, which contains all the lines of the advertisements.
+										<pre><code>
+dados <- unlist(strsplit(x = anuncios$Anuncio, split = '\n'))
+										</code></pre>
+									Now it is possible to extract the "Price".
+										<pre><code>
+anuncios$Preco <- grep(pattern = '/mês|Aluguel', x = dados, value=TRUE)
+head(anuncios, 2)
+
+##                                                                                                                                                                                                            Anuncio
+## 1 super destaque apartamento para alugar em\r\nRua da República - Cidade Baixa, Porto Alegre - RS\r\nR$ 1.300 /mês\r\ncondomínio R$ 516 IPTU R$ 53 aluguel e condomínioR$ 1.816\r\n61 m²\r\n1 quarto\r\n1 banheiro
+## 2             apartamento para alugar em\r\nRua Cônego Ladeira, 57 - Vila Mazzei, São Paulo - SP\r\nR$ 1.500 /mês\r\ncondomínio R$ 100 IPTU R$ 32 aluguel e condomínioR$ 1.600\r\n42 m²\r\n2 quartos\r\n1 banheiro
+##   Tipo           Preco
+## 1   AP R$ 1.300 /mês\r
+## 2   AP R$ 1.500 /mês\r
+										</code></pre>
+									Now we have the column with the prices. However, it is still necessary to carry out the cleaning and keep only the values. For this, I will use the parse_number function.
+										<pre><code>
+anuncios$Preco <- parse_number(x = anuncios$Preco, locale = locale(decimal_mark= ',' , grouping_mark = '.'))
+head(anuncios, 2)
+
+##                                                                                                                                                                                                            Anuncio
+## 1 super destaque apartamento para alugar em\r\nRua da República - Cidade Baixa, Porto Alegre - RS\r\nR$ 1.300 /mês\r\ncondomínio R$ 516 IPTU R$ 53 aluguel e condomínioR$ 1.816\r\n61 m²\r\n1 quarto\r\n1 banheiro
+## 2             apartamento para alugar em\r\nRua Cônego Ladeira, 57 - Vila Mazzei, São Paulo - SP\r\nR$ 1.500 /mês\r\ncondomínio R$ 100 IPTU R$ 32 aluguel e condomínioR$ 1.600\r\n42 m²\r\n2 quartos\r\n1 banheiro
+##   Tipo Preco
+## 1   AP  1300
+## 2   AP  1500
+										</code></pre>
+									Now we have both the property type and its price!
+									</p>
+
+									<p>
+									<h4 class="major">The "Area" variable</h4>
+									The property size is a must have information when it comes to living confort and real state business.
+									Note that all advertisements presents this information in the structure "number + m^2". Therefore,
+										<pre><code>
+anuncios$Area <- grep(pattern = '[0-9]+\\sm', x = dados, value = TRUE)
+head(anuncios, 2)
+
+##                                                                                                                                                                                                            Anuncio
+## 1 super destaque apartamento para alugar em\r\nRua da República - Cidade Baixa, Porto Alegre - RS\r\nR$ 1.300 /mês\r\ncondomínio R$ 516 IPTU R$ 53 aluguel e condomínioR$ 1.816\r\n61 m²\r\n1 quarto\r\n1 banheiro
+## 2             apartamento para alugar em\r\nRua Cônego Ladeira, 57 - Vila Mazzei, São Paulo - SP\r\nR$ 1.500 /mês\r\ncondomínio R$ 100 IPTU R$ 32 aluguel e condomínioR$ 1.600\r\n42 m²\r\n2 quartos\r\n1 banheiro
+##   Tipo Preco    Area
+## 1   AP  1300 61 m²\r
+## 2   AP  1500 42 m²\r
+										</code></pre>
+
+									</p>
+
+
+									<h2 class="major">Chapter 2: Exploratory Data Analysis</h2>
+
+									<h2 class="major">Chapter 3: Geoespacial Analysis</h2>
+
+									<h2 class="major">Vitae phasellus</h2>
 									<p>Cras mattis ante fermentum, malesuada neque vitae, eleifend erat. Phasellus non pulvinar erat. Fusce tincidunt, nisl eget mattis egestas, purus ipsum consequat orci, sit amet lobortis lorem lacus in tellus. Sed ac elementum arcu. Quisque placerat auctor laoreet.</p>
 
 									<section class="features">
