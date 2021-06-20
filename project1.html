@@ -557,7 +557,7 @@ head(anuncios, 5)
 ## 5 AP      950    45       2         1 "Gleba Palhano,~ PR     Londr~  NA    NA
 										</code></pre>
 
-										How will property prices be distributed? How much do you think the maximum rental price is? Let's figure this out using a simple histogram.
+											How will property prices be distributed? How much do you think the maximum rental price is? Let's figure this out using a simple histogram.
 
 										<pre><code>
 options(scipen=999)
@@ -570,11 +570,479 @@ hist <- plot_ly(data=anuncios,
                    yaxis=list(title='Frequência'))
 hist
 										</code></pre>
+									<h4 class="major">FIRST HISTOGRAM HERE</h4>
+										Wow! We have outliers reaching up to R$1 million! This is okay if it was the sale value, but R$ 1 million monthly?
+										It seems a little absurd! We can further investigate the variable distribution and outliers using a boxplot plot.
+										The boxplot is a graph that provides important information about the statistics of the variable in analysis, such as median,
+										first and third quartile, maximum, minimum and outliers.
+									<pre><code>
+plot_ly(data=anuncios,
+        type='box') %>%
+  add_trace(y=~Preco,
+            name='Preço')
+									</code></pre>
+										Alright, apparently there are a lot of outliers in this dataset. Shall we verify if the same happens with the "Area" Variable.
+									<pre><code>
+plot_ly(data=anuncios,
+        type='box') %>%
+  add_trace(y=~Area,
+            name='Área (m²)')
+									</code></pre>
+										Unfortunately the result is similar. We have a property with more than 450,000 square meters (maybe it's a farm or something like that).
+										So I will follow our boxplots and remove the outliers from our dataset. The price variable will have a maximum of 5 thousand reais and the
+										Area variable will have its upper limit of 200 square meters. It is possible to extract the boxplot function's outliers through the "out"
+										column and then do a logical indexing to create a new dataframe without them.
+									<pre><code>
+# Removing outliers
+anunciosf <- anuncios[-which(anuncios$Preco %in% boxplot(anuncios$Preco, plot=F)$out),] # Outliers from Preco
+anunciosf <- anunciosf[-which(anunciosf$Area %in% boxplot(anunciosf$Area, plot=F)$out),] # Outliers from Area
+									</code></pre>
+										Now let's rerun the graphs and see better how the Price and Area variables are distributed.
+									<pre><code>
+hist1 <- plot_ly(data=anunciosf,
+                 type='histogram',
+                 colors=c('orange')) %>%
+  add_trace(name='Preço',
+                 x=~Preco,
+                 color=I('orange'),
+                xbins=10) %>%
+  layout(title='Distribuição dos preços dos imóveis (sem outliers)',
+  xaxis=list(title='Preço'),
+  yaxis=list(title='Frequência'))
+
+bx1 <- plot_ly(data=anunciosf,
+        type='box',
+        colors=c('blue', 'orange')) %>%
+  add_trace(y=~Preco,
+            name='Preço',
+            color=I('orange')) %>%
+  layout(title='Distribuição dos preços dos imóveis (sem outliers)')
+
+bx2 <- plot_ly(data=anunciosf,
+        type='box') %>%
+  add_trace(y=~Area,
+            name='Área',
+            color=I('steelblue')) %>%
+  layout(title='Distribuição dos preços dos imóveis (sem outliers)')
+
+fig1 <- subplot(hist1, bx1, bx2, widths = c(0.4, 0.3, 0.3), nrows=1)
+fig1
+									</code></pre>
+										Much better! Now the data has a more user-friendly distribution. Note that when filtering the dataset,
+										new outliers appear. But let's not worry about them that much, otherwise we run the risk of getting into a loop.
+										Let us turn our attention to the relationship between Price and Area. It is to be expected that the larger a property,
+										the more expensive it is. We'll also look at how this relationship varies by property type. For that, I'll do a scatterplot
+										depending on the Type.
+									<pre><code>
+plot_ly(data=anunciosf,
+        type='scatter',
+        x=~Area,
+        y=~Preco,
+        color=~Tipo,
+        colors=c('orange', 'steelblue'),
+        marker = list(size=7),
+        mode='markers') %>%
+  layout(title='Relação entre Área e Preço do imóvel',
+         xaxis=list(title='Área (m²)'),
+         yaxis=list(title='Preço'))
+									</code></pre>
+									<h4 class="major">SCATTERPLOT 1 HERE</h4>
+										The relationship between price and area is not as linear as we thought. Also note that there are sets of points aligned
+										vertically at the same value. Can you explain why? I will come back to this later. Visually, it is also possible to see that
+										apartment prices reach higher values ​​than houses when the area is less than 100 square meters. In addition, after this
+										value, one begins to notice a decrease in the number of apartments. This must happen due to the spatial limitation that the
+										apartments are submitted to. However, fixing the area at 200 square meters, the price varies from 250 to 5000. What can cause
+										this price variation for properties of the same size? It was with this in mind that I collected the geographic information
+										from the residences! Location is a decisive factor in pricing a property.
+
+										Now it remains to verify how the rental price varies according to the other numerical variables quantity of rooms and bathrooms.
+										The graph below shows the relationship between price and rooms and, on the right, the relationship between price and bathrooms.
+
+									<pre><code>
+sct1 <- plot_ly(data=anunciosf,
+        type='scatter',
+        x=~Quartos,
+        y=~Preco,
+        color=~Tipo,
+        colors=c('orange', 'steelblue'),
+        marker = list(size=7),
+        mode='markers') %>%
+  layout(title='Preço do imóvel versus quantidade de quartos',
+         xaxis=list(title='Quartos', autotick=FALSE, tick0=0, dtick=1),
+         yaxis=list(title='Preço'))
+
+sct2 <- plot_ly(data=anunciosf,
+        type='scatter',
+        x=~Banheiros,
+        y=~Preco,
+        color=~Tipo,
+        colors=c('orange', 'steelblue'),
+        marker = list(size=7),
+        mode='markers',
+        showlegend=F) %>%
+  layout(title='Preço do imóvel versus quantidade de banheiros',
+         xaxis=list(title='Banheiros', autotick=FALSE, tick0=0, dtick=1),
+         yaxis=list(title='Preço'))
+
+fig2 <- subplot(sct1, sct2, titleX = T, titleY=T, shareY=T, which_layout = c(1,2))
+fig2
+									</code></pre>
+									<h4 class="major">SCATTERPLOT 2 HERE</h4>
+										Returning to my question about the vertical lines, they represent precisely the properties with equal values of bedrooms and bathrooms.
+										It seems that these two variables tell us little about pricing.
+										We can verify this by running a Pearson correlation test.
+									<pre><code>
+anunciosf <- anunciosf[!is.na(anunciosf$Preco),]
+pversusq <- cor(x=anunciosf$Preco, y=anunciosf$Quartos)
+pversusb <- cor(x=anunciosf$Preco, y=anunciosf$Banheiros)
+paste("O coeficiente de correlação Pearson entre Preco e Quartos é", pversusq)
+paste("O coeficiente de correlação Pearson entre Preco e Banheiros é", pversusb)
+
+## [1] "O coeficiente de correlação Pearson entre Preco e Quartos é 0.26036535879529"
+## [1] "O coeficiente de correlação Pearson entre Preco e Banheiros é 0.418361998820095"
+									</code></pre>
+										Both coefficients are relatively weak, as would be expected from the analysis of the graph. We can conclude so far that the
+									pricing of homes goes beyond the total size and number of rooms. Some other features, which are not in our dataset, can contribute
+									to the appreciation (or depreciation) of a property, such as foundation (if the house is designed to receive 1 or more upper floors),
+									type of floor (cement, porcelain or flooring vinyl), roofing (slab or roof), year of construction, among others.
 									</p>
 
+									<h4 class="major">Is there a relevant difference between the prices of houses and apartments?</h4>
+									<p>
+										Let's turn our attention now to the controversy that says that apartments are cheaper than houses, when compared to properties of the same dimensions.
+										Is this really true? As we've seen, pricing can be quite complex, so for study purposes, let's run a hypothesis test to find out if the difference
+										between average house and apartment prices is statistically relevant. It is possible to get a sense of the differences in price averages by viewing
+										the boxplots of the variable as a function of the variable Type:
+										<pre><code>
+bx3 <- plot_ly(data=anunciosf,
+               color=~Tipo) %>%
+  add_boxplot(y=~Preco) %>%
+  layout(title='Distribuição dos preços dos imóveis')
+bx3
+										</code></pre>
+									<h4 class="major">BOX PLOT 3 HERE</h4>
+										The two classes have very similar values! We could conclude here the verification of the hypotheses, but in the first scatter plot we observe that,
+										for a number of small rooms, the values of apartments are higher than those of houses. Thus, let's rerun these boxplots considering the number of rooms
+										equal to 1.
+										<pre><code>
+bx3 <- plot_ly(data=filter(anunciosf, Quartos==1),
+               color=~Tipo) %>%
+  add_boxplot(y=~Preco) %>%
+  layout(title='Distribuição dos preços dos imóveis')
+bx3
+										</code></pre>
+									<h4 class="major">BOX PLOT 3 HERE</h4>
+										You can now see a significant difference! House prices have a much smaller variance than apartment prices. Therefore, it is worth performing a hypothesis
+										test to verify whether, for 1 quart, there is a significant difference between these means.
+										Before starting the hypothesis test, it is necessary to know the type of distribution of the variables. For this, let us consider the histograms:
+										<pre><code>
+# Verificando a normalidade pelo histograma
+hist2 <- plot_ly(data=anunciosf,color=~Tipo, nbinsx=20) %>%
+  add_histogram(x=~Preco) %>%
+  layout(xaxis=list(title='Preço', tick0=0, autotick=F, dtick=500),
+         yaxis=list(title='Frequência'),
+         title='Verificando a Normalidade do Preço')
+hist2
+										</code></pre>
+									<h4 class="major">HISTOGRAM 2 HERE</h4>
+										<pre><code>
+# Verificando a normalidade pelo QQ-plot
+qqnorm(anunciosf$Preco, main='QQ plot da variável Preço', pch=18)
+qqline(anunciosf$Preco)
+										</code></pre>
 
+									<h4 class="major">QQPLOT HERE</h4>
+										We can conclude that the price does not follow a Normal distribution. It's even more like a Poisson distribution. To finalize the verification,
+										we used the Anderson-Darling test, considering that the sample size is greater than 51. Here are the hypotheses:
+										H0:A variável Preco segue distribuição Normal
+										H1:A variável Preco não segue distribuição Normal
+										<pre><code>
+ad.test(anunciosf$Preco)
+
+##
+##  Anderson-Darling normality test
+##
+## data:  anunciosf$Preco
+## A = 588.06, p-value < 0.00000000000000022
+										</code></pre>
+										Independentemente do nível de confiança, a distribuição definitivamente não é Normal! Pensando nisto, precisamos ou realizar
+										testes não parámetricos ou transformar a distrição original em uma distribuição Normal utilizando o Teorema Central do Limite (TCL).
+										Vamos usar a segunda opção.
+										Dessa forma, as hipóteses são:
+										H0:Não existe diferença entre os preços de casas e apartamentos
+										H1:Existe diferença entre os preços de casas e apartamentos
+										<pre><code>
+n.amostras <- 1000
+tam.amostra <- 100
+medias.ap <- vector()
+medias.cs <- vector()
+for (i in 1:n.amostras){
+  medias.ap[i] <- mean(sample(filter(anunciosf, Tipo=='CS' & Quartos==1)$Preco, size=tam.amostra, replace=T))
+  medias.cs[i] <- mean(sample(filter(anunciosf, Tipo=='AP' & Quartos==1)$Preco, size=tam.amostra, replace=T))
+}
+hist(medias.ap)
+										</code></pre>
+
+
+									</p>
+
+									<h3 class="major">Summary</h3>
+									<p>
+										To finish this first part of the EDA, let's summarize some of the information seen so far.
+										<h4>Dataset numerical variables summary</h4>
+										<div class="table-wrapper">
+											<table class="alt">
+												<thead>
+													<tr>
+														<th>Type</th>
+														<th>Count</th>
+														<th>Mean.Price</th>
+														<th>Standard.Dev.Price</th>
+														<th>Mean.Bedrooms</th>
+														<th>Mean.Bathrooms</th>
+													</tr>
+												</thead>
+												<tbody>
+													<tr>
+														<td>AP</td>
+														<td>16170</td>
+														<td>1661.71</td>
+														<td>947.62</td>
+														<td>2.09</td>
+														<td>1.62</td>
+													</tr>
+													<tr>
+														<td>CS</td>
+														<td>5588</td>
+														<td>1611.81</td>
+														<td>930.96</td>
+														<td>2.29</td>
+														<td>1.62</td>
+													</tr>
+													<tr>
+												</tbody>
+											</table>
+										</div>
+
+										In addition to the numerical discoveries, we have
+												<ol>
+													<li>Number of bedrooms and bathrooms alone say little about the pricing of a property.</li>
+													<li>There is no statistical difference between the prices of houses and apartments.</li>
+												</ol>
+									</p>
 
 									<h2 class="major">Chapter 3: Geoespacial Analysis</h2>
+									<h3 class="major">In this section we'll explore how location affects the pricing of a property.</h3>
+									<p>
+										In the search for the perfect home, location plays a major role in the process of choosing a new living place.
+										Issues such as proximity to bakeries, schools, universities, leisure centers, beach, public transport integrations,
+										among others, arise and we must make the decision based both on our needs and our personallity. There are those who
+										like the bustle of the urban center and living close to work. Other people prefer to live further away, isolated from
+										the noise and rush of everyday life. Each of these alternatives leads to different choices. Choices that bring with them
+										their negative points, such as transportation expenses, for those who live far from work, and high rent costs, for those
+										who live downtown. In this section we will explore how property prices vary across the Brazilian territory. Find out the
+										averages, maximums and minimums for each state and how these values relate to the average state income and quality
+										of life.
+
+										To start, let's look again at the appearance of our dataframe in relation to the columns with geographic information.
+										<pre><code>
+head(select(anunciosf, -c(1:5)), 5)
+
+## # A tibble: 5 x 5
+##   Endereco                                         Estado Cidade       lat  long
+##   <chr>                                            <chr>  <chr>      <dbl> <dbl>
+## 1 "Rua da República - Cidade Baixa, Porto Alegre ~ RS     Porto Ale~ -30.0 -51.2
+## 2 "Rua Cônego Ladeira, 57 - Vila Mazzei, São Paul~ SP     São Paulo  -23.5 -46.6
+## 3 "Centro Histórico, Porto Alegre - RS\r, Brazil"  RS     Porto Ale~ -30.0 -51.2
+## 4 "Rua Marquês de Valença - Móoca, São Paulo - SP~ SP     São Paulo  -23.6 -46.6
+## 5 "Gleba Palhano, Londrina - PR\r, Brazil"         PR     Londrina    NA    NA
+										</code></pre>
+										There are several rows, in the lat and long columns, with NA values. This happened because not all addresses were found by the geocode function.
+										Let's remove these lines and work only with the ones that have the full coordinates.
+										<pre><code>
+anunciosf <- data.frame(drop_na(anunciosf))
+										</code></pre>
+										Unfortunately we missed a good number of observations. To start with, let's find the average price and how many observations were recorded per state. We can observe this through a table:
+										<pre><code>
+by_state1 <- anunciosf %>%
+  group_by(Estado) %>%
+  summarise(Quantidade=n(),
+            MediaPreco = round(mean(Preco),2)) %>%
+  arrange(desc(Quantidade, MediaPreco))
+datatable(data=by_state1, caption='Número de observações e média por estado')
+										</code></pre>
+									<h4 class="major">STATES TABLE HERE</h4>
+										It is notable that São Paulo occupies a lot of space on real estate websites. There is a large imbalance in the geographic proportion
+										of this dataset. This can (and should) be corrected with a new data collection focused on states with fewer observations.
+										In addition to the table, with a bar chart we can better visualize the averages by state and property type:
+										<pre><code>
+by_state2 <- anunciosf %>%
+  group_by(Estado, Tipo) %>%
+  summarise(Quantidade=n(),
+            MediaPreco = mean(Preco)) %>%
+  arrange(MediaPreco)
+
+bar1 <- plot_ly(data=by_state2,
+                type='bar',
+                color=~Tipo) %>%
+  add_trace(x=~Estado, y=~MediaPreco)
+
+bar1
+										</code></pre>
+									<h4 class="major">BARPLOT 1 HERE</h4>
+
+										It is also possible to note that some states do not have any observations regarding houses, and that there are no observations regarding the states of Acre, Amapá, Rondônia, Roraima and Amazonas.
+
+										To finish this part, we can look at the relationship between the average of rent values and the average wages by state. This information is relevant because, someone may feel excited to move to São Paulo because the salaries are higher,
+										but when they get there they face higher rents and cost of living than before. I couldn't find this information on the IBGE
+										(Brazilian Institute of Geography and Statistics) website, which is the official body responsible for data collection, so I
+										will use a survey carried out by the company Catho, which operates in the field of statistical research.
+										<pre><code>
+# Lendo o arquivo que contém a média salarial por estado
+salarios <- read.csv('salarios.csv', sep=';')
+names(salarios)[2] <- 'MediaSalario'
+head(salarios, 5)
+
+##   Estado MediaSalario
+## 1     SP  R$ 2.760,94
+## 2     DF  R$ 2.529,17
+## 3     RJ  R$ 2.487,28
+## 4     SC  R$ 2.355,82
+## 5     PR  R$ 2.293,35
+										</code></pre>
+										Now we need to join the two dataframes together. We can do this using the <i>merge</i> function.
+										<pre><code>
+anunciosg <- merge(x=by_state1,
+                   y=salarios,
+                   by='Estado')
+
+anunciosg$MediaSalario <- parse_number(anunciosg$MediaSalario, locale=locale(decimal_mark=',', grouping_mark = '.'))
+										</code></pre>
+										And finally, we create a vector that shows the ratio between the average salary and the average rental cost per state.
+										<pre><code>
+anunciosg <- arrange(anunciosg, MediaPreco)
+anunciosg <- mutate(anunciosg, Proporcao = anunciosg$MediaPreco/anunciosg$MediaSalario)
+
+bar2 <- plot_ly(data=anunciosg, type='bar',
+                orientation='h',
+                color=~Proporcao,
+                colors=) %>%
+  add_trace(y=~Estado,
+            x=~MediaPreco) %>%
+  add_annotations(xref=anunciosg$MediaPreco, yref=anunciosg$Estado,
+                  y=anunciosg$Estado, x= anunciosg$MediaPreco*1 + 200,
+                  text=paste(round(anunciosg$Proporcao, 2)*100, '%'),
+                  showarrow=F) %>%
+  layout(title='Proporção entre salário médio e valor médio de aluguel',
+  xaxis=list(title='Valor Aluguel'),
+  yaxis=list(title='Estado'))
+bar2
+										</code></pre>
+									<h4 class="major">BARPLOT 2 HERE</h4>
+										As can be seen, in some Brazilian states the average price of a residential rental is higher than the average salary itself:
+										<pre><code>
+Acima_da_Media <- filter(anunciosg, Proporcao>1)[-2]
+Acima_da_Media
+
+##   Estado MediaPreco MediaSalario Proporcao
+## 1     PB    1787.26      1750.84  1.020801
+## 2     AL    2030.41      1807.32  1.123437
+## 3     PA    2075.00      2061.45  1.006573
+## 4     PE    2108.35      1908.52  1.104704
+## 5     ES    2522.22      2125.70  1.186536
+## 6     TO    2850.00      1968.34  1.447921
+										</code></pre>
+									</p>
+
+									<h3 class="major">Maps</h3>
+									<p>
+										A third way to analyze our data, in addition to the graphs and tables previously explored, is through maps. Maps can be very useful at this point as
+										they bring a sense of space and distance that are absent in previous indicators. Furthermore, it is also possible to better understand the distribution
+										of residences in the regions of each state. Do you think there are more properties listed on the site coming from the capitals or the countryside?
+										To start with, we need to use a special type of variable. Note that our dataframe already has two columns with the longitudes and latitudes of the homes.
+										However, in order for us to locate these points on a map it is necessary to transform them into the <code>sf</code> (single feature) format. This manipulation can be
+										done through the function <code>st_as_sf</code>, which transforms a dataframe that has columns with latitudes and longitudes into a dataframe of type <code>sf</code>, with a column
+										called <code>geometry</code>. This column has data in <code>point</code> format, in the form (long, lat). In addition, we will use the ne_states function from the <i>rnaturalearth</i> library
+										to download the map of Brazil, which will also be stored in an object of type <code>sf</code>. To start with, we can plot all homes that have a full address on the map of
+										Brazil using the function using the <i>ggplot2</i> library.
+										<pre><code>
+# Transforming the regular dataframe into a sf dataframe
+pontos_sf <- st_as_sf(anunciosf, coords=c('long','lat'), crs=4326)
+
+# Download the brazilian map
+estados_sf <- ne_states(country='brazil', returnclas='sf')
+
+mapa <- ggplot() +
+  geom_sf(data=estados_sf,
+          fill=gray(0.85), color=gray(0.7)) +
+  labs(title='Mapa do Brasil')
+mapa
+										</code></pre>
+										<h4 class="major">BRAZIL MAP 1 HERE</h4>
+
+									Now we can add points to the map through the new <i>geometry</i> column, from the points_sf dataframe, which was added to the dataframe.
+										<pre><code>
+mapa <- ggplot() +
+  geom_sf(data=estados_sf, # Brazilian map
+          fill=gray(0.85),
+          color=gray(0.7)) +
+  geom_sf(data=pontos_sf,
+          alpha=0.7,
+          aes(color=Preco),
+          size=2.5,
+          show.legend = 'point') +
+  labs(title='Distribuição dos imóveis no Brasil')
+
+mapa
+										</code></pre>
+										<h4 class="major">BRAZIL MAP 2 HERE</h4>
+
+										And finally, to complement it, we can show the average rental price by state on the map:
+										<pre><code>
+
+# First it is necessary to unite the estados_sf dataframe with the anunciosg dataframe
+options(scipen = 100) # Turning of the scientific notation
+
+new.df <- merge(x=estados_sf, y=anunciosg,
+                by.x ='postal', by.y='Estado', all=T)
+
+# Creating discret intervals to the Price variable
+breaks_media <- classIntervals(c(min(anunciosg$MediaPreco) - 0.00001, anunciosg$MediaPreco), n=7, style='quantile')
+
+new.df <- mutate(new.df, MediaPrecoCat = cut(MediaPreco, breaks_media$brks))
+
+# Changing the scientific notation
+levels(new.df$MediaPrecoCat) <- c('(1000,1210]', '(1210,1390]', '(1390,1580]', '(1580,1780]',
+                                  '(1780,2000]','(2000,2070]', '(2070,2850]')
+mapa2 <- ggplot() +
+  geom_sf(data=new.df,
+          aes(fill=MediaPrecoCat)) +
+          scale_fill_brewer(palette='OrRd') +
+  labs(title='Média de preço por Estado',
+       fill='Preço Médio')
+mapa2
+										</code></pre>
+									<h4 class="major">BRAZIL MAP 3 HERE</h4>
+
+									Proportion Map
+										<pre><code>
+# Proportion map
+breaks_prop <- classIntervals(c(min(anunciosg$Proporcao) - 0.0000001, anunciosg$Proporcao), n=7, style='quantile')
+
+new.df <- mutate(new.df, ProporcaoCat = cut(Proporcao, breaks_prop$brks))
+
+
+mapa3 <- ggplot() +
+  geom_sf(data=new.df,
+          aes(fill=ProporcaoCat)) +
+          scale_fill_brewer(palette='OrRd') +
+  labs(title='Proporção entre aluguel e salário',
+       fill='Proporção')
+mapa3
+										</code></pre>
+									<h4 class="major">BRAZIL MAP 4 HERE</h4>
+
+									</p>
 
 									<h2 class="major">Vitae phasellus</h2>
 									<p>Cras mattis ante fermentum, malesuada neque vitae, eleifend erat. Phasellus non pulvinar erat. Fusce tincidunt, nisl eget mattis egestas, purus ipsum consequat orci, sit amet lobortis lorem lacus in tellus. Sed ac elementum arcu. Quisque placerat auctor laoreet.</p>
